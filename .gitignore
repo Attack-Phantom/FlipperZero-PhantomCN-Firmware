@@ -50,6 +50,8 @@ null.d
 
 # SCons build dir
 /build
+!/Build/
+!/Build/mntm-012cn-phantom.tgz
 
 # Toolchain
 /toolchain

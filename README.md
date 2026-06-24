@@ -4,22 +4,34 @@ Flipper Zero 汉化定制固件· Phantom 版
 
 基于 **mntm-012** 的全量中文汉化 + 功能增强固件，由 **Phantom** 汉化开发。
 
-宋体中文界面、桌面播放 Bad Apple 动画，内置 BLE Killer、SubGHz 暴力破解（PT2262）以及一批射频干扰 / 特斯拉信号包，开箱即用。
+内置中文界面字体、桌面播放 Bad Apple 动画，内置 BLE Killer、SubGHz 暴力破解（PT2262）以及一批射频干扰 / 特斯拉信号包，开箱即用。
+
+---
+
+## 更新日志
+
+### 2026-06-25
+- 中文字体改为固件内置，菜单和应用界面不再依赖 SD 卡字体文件。
+- `PhantomCN` 资源包只保留 Bad Apple 桌面动画，移除 SD 字体和其它多余资源包目录。
+- Bad Apple 改为 SD 卡加载 120 帧，降低固件 flash 占用；SD 资源缺失或损坏时自动回退到固件内单帧。
+- 桌面动画加载器改为 PhantomCN / Bad Apple 专用路径，减少启动解析开销和内存分配压力。
+- 文件浏览 / Storage 相关流程补充取消检查和超时处理，降低卡住和页面进入延迟概率。
+- 增加 malloc 失败、线程栈溢出等异常兜底，便于定位偶发重启。
+- 发布包同步到 `Build/mntm-012cn-phantom.tgz`。
 
 ---
 
 ## 一、相对原版新增 / 改动
 
-### 1. 全量中文汉化（宋体）
+### 1. 全量中文汉化
 - 界面文案内联汉化，覆盖菜单、设置、各应用主流程，约 600+ 处字符串。
-- 自带 **宋体（SimSun）风格** 中文字库，以 asset pack（`PhantomCN`）形式随资源写入 SD 卡，不占用固件 flash 空间。
-- 字库为 u8g2 格式：`Primary.u8f` / `Secondary.u8f`，包含常用 CJK 字符。
-- 开机默认启用资源包 `PhantomCN`（见“自定义”一节，可在 设置 → Momentum → 资源包 中切换）。
+- 中文字库已写入固件，安装后无需 SD 卡字体文件即可显示中文。
+- 默认使用 `PhantomCN` 资源包加载桌面动画；字体不再从资源包加载。
 
 ### 2. 桌面 Bad Apple 动画
 - 经典《Bad Apple!!》开场（灵梦 → 魔理沙）片段，转换为 Flipper 桌面动画格式。
-- 共 **255 帧**，128×64 单色，默认 24 fps。
-- 作为 `PhantomCN` 资源包的 Anim 随包加载，开机桌面即播放。
+- 共 **120 帧**，128×64 单色，默认 24 fps。
+- 作为 `PhantomCN` 资源包的 Anim 随包加载；资源异常时回退到固件内单帧。
 
 ### 3. 新增应用（Apps）
 | 应用 | 名称 | 说明 |
@@ -59,8 +71,8 @@ Flipper Zero 汉化定制固件· Phantom 版
 ### 2. Phantom 定制功能
 | 功能 | 说明 |
 |---|---|
-| 中文汉化 | 菜单、设置、核心应用流程约 600+ 处中文化，默认使用 `PhantomCN` 资源包。 |
-| 宋体字库 | `Primary.u8f` / `Secondary.u8f` 放在 `asset_packs/PhantomCN/Fonts/`，随 SD 资源包加载 |
+| 中文汉化 | 菜单、设置、核心应用流程约 600+ 处中文化。 |
+| 中文字库 | 字体内置在固件中，不依赖 `asset_packs/PhantomCN/Fonts/` |
 | BLE Killer | `[BLE] BLE Killer`，用于 BLE 广播压测、广播包刷屏与近场蓝牙干扰测试。 |
 | SubGHz BF PT2262 | `SubGHz BF PT2262`，针对 PT2262 等固定码芯片的 Sub-GHz 暴力枚举工具。 |
 | RF Jammer 资源 | `subghz/RF_Jammer/` 内置 52 个 `.sub` 信号文件。 |
@@ -420,21 +432,21 @@ Flipper Zero 汉化定制固件· Phantom 版
 
 ## 四、安装
 
-固件版本号：`mntm-012cn-phantom`。安装产物在 `dist/f7-C/`。
+固件版本号：`mntm-012cn-phantom`。qFlipper 安装包在 `Build/mntm-012cn-phantom.tgz`。
 
 > ⚠️ 安装前确保 SD 卡健康（FAT32、读写正常）。卡损坏 / 过慢会导致 `SD card IO error` 或校验超时。可在 设置 → 存储 → 格式化 SD 卡 重建文件系统。
 
 ### 方法 A：qFlipper（推荐）
 1. 连接 Flipper，打开 qFlipper；
 2. 「Install from file」选择
-   `dist/f7-C/flipper-z-f7-update-mntm-012cn-phantom.tgz`；
+   `Build/mntm-012cn-phantom.tgz`；
 3. 等待写入 + 校验 + 自动重启。
 
 ### 方法 B：SD 卡自更新（绕开 qFlipper 校验，适合慢卡）
-1. 将 `dist/f7-C/f7-update-mntm-012cn-phantom/` 整个文件夹拷到 SD 卡 `/update/` 下；
+1. 从 `Build/mntm-012cn-phantom.tgz` 解出 `f7-update-mntm-012/`，放到 SD 卡 `/update/` 下；
 2. Flipper 文件浏览器进入该目录 → 选 `update.fuf` → 确认安装。
 
-> updater.bin 已控制在 128KB 以内，支持设备端自更新，不会引发更新器引导失败。
+> 如果从很旧的固件直接升级，建议优先使用 qFlipper 安装。
 
 ---
 
@@ -447,7 +459,7 @@ Flipper Zero 汉化定制固件· Phantom 版
 编辑 SD 卡 `/ext/asset_packs/PhantomCN/Anims/BadApple/meta.txt` 中 `Frame rate`（默认 24，觉得卡可改 12~15），重启生效。
 
 ### 字库 / 动画工程文件
-- 字库源：`assets/packs/PhantomCN/Fonts/`
+- 字库源：`lib/momentum/font_cn.c`
 - 动画源：`assets/packs/PhantomCN/Anims/BadApple/`
 
 ---
@@ -456,8 +468,8 @@ Flipper Zero 汉化定制固件· Phantom 版
 
 ```bash
 # Windows (PowerShell)
-$env:DIST_SUFFIX = "mntm-012cn-phantom"
-.\fbt.cmd updater_package "COPRO_DISCLAIMER=--I-understand-what-I-am-doing=yes"
+.\fbt.cmd firmware_all
+.\fbt.cmd updater_package --with-updater
 ```
 
 ---

@@ -3,11 +3,13 @@
 #include <furi_hal.h>
 #include <rgb_backlight.h>
 #include <flipper_format/flipper_format.h>
+#include <storage/storage.h>
+#include "asset_packs.h"
 
 #define TAG "MomentumSettings"
 
 MomentumSettings momentum_settings = {
-    .asset_pack = "PhantomCN", // 默认:宋体字库 + Bad Apple 桌面动画
+    .asset_pack = "PhantomCN",
     .anim_speed = 100, // 100%
     .cycle_anims = 0, // Meta.txt
     .unlock_anims = false, // OFF
@@ -123,6 +125,40 @@ static const struct {
     {setting_uint(rpc_color_bg, 0x000000, 0xFFFFFF)},
 };
 
+static bool momentum_settings_asset_pack_name_ok(const char* name) {
+    if(name[0] == '\0') return true;
+
+    for(size_t i = 0; name[i] != '\0'; i++) {
+        char c = name[i];
+        bool ok = (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') ||
+                  c == '_' || c == '-' || c == '.';
+        if(!ok) return false;
+    }
+
+    return strcmp(name, ".") != 0 && strcmp(name, "..") != 0 && strstr(name, "..") == NULL;
+}
+
+static bool momentum_settings_asset_pack_ready(Storage* storage, const char* name) {
+    if(name[0] == '\0') return true;
+    if(!momentum_settings_asset_pack_name_ok(name)) return false;
+    if(strcmp(name, "PhantomCN") != 0) return true;
+
+    bool ok = false;
+    FuriString* path = furi_string_alloc_printf(ASSET_PACKS_PATH "/%s", name);
+    do {
+        FileInfo info;
+        if(storage_common_stat(storage, furi_string_get_cstr(path), &info) != FSE_OK) break;
+        if(!(info.flags & FSF_DIRECTORY)) break;
+
+        furi_string_cat(path, "/Anims/manifest.txt");
+        if(storage_common_stat(storage, furi_string_get_cstr(path), NULL) != FSE_OK) break;
+
+        ok = true;
+    } while(false);
+    furi_string_free(path);
+    return ok;
+}
+
 void momentum_settings_load(void) {
     Storage* storage = furi_record_open(RECORD_STORAGE);
     FlipperFormat* file = flipper_format_file_alloc(storage);
@@ -163,6 +199,16 @@ void momentum_settings_load(void) {
         furi_string_free(val_str);
     }
     flipper_format_free(file);
+
+    if(momentum_settings.asset_pack[0] == '\0') {
+        strlcpy(momentum_settings.asset_pack, "PhantomCN", sizeof(momentum_settings.asset_pack));
+    }
+
+    if(!momentum_settings_asset_pack_ready(storage, momentum_settings.asset_pack)) {
+        FURI_LOG_W(TAG, "Asset pack fallback: %s", momentum_settings.asset_pack);
+        momentum_settings.asset_pack[0] = '\0';
+    }
+
     furi_record_close(RECORD_STORAGE);
 
     rgb_backlight_load_settings(momentum_settings.rgb_backlight);

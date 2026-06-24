@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <u8g2_glue.h>
 #include <momentum/asset_packs_i.h>
+#include <momentum/font_cn.h>
 #include <momentum/settings.h>
 
 const CanvasFontParameters canvas_font_params[FontTotalNumber] = {
@@ -121,13 +122,7 @@ size_t canvas_height(const Canvas* canvas) {
 
 size_t canvas_current_font_height(const Canvas* canvas) {
     furi_check(canvas);
-    size_t font_height = u8g2_GetMaxCharHeight(&canvas->fb);
-
-    if(canvas->fb.font == u8g2_font_haxrcorp4089_tr) {
-        font_height += 1;
-    }
-
-    return font_height;
+    return u8g2_GetMaxCharHeight(&canvas->fb);
 }
 
 size_t canvas_current_font_width(const Canvas* canvas) {
@@ -140,6 +135,10 @@ const CanvasFontParameters* canvas_get_font_params(const Canvas* canvas, Font fo
     furi_check(font < FontTotalNumber);
     if(asset_packs && asset_packs->font_params[font]) {
         return asset_packs->font_params[font];
+    }
+    if(font == FontPrimary || font == FontSecondary || font == FontKeyboard ||
+       font == FontBigNumbers || font == FontBatteryPercent) {
+        return &momentum_font_cn_params;
     }
     return &canvas_font_params[font];
 }
@@ -190,19 +189,11 @@ void canvas_set_font(Canvas* canvas, Font font) {
     }
     switch(font) {
     case FontPrimary:
-        u8g2_SetFont(&canvas->fb, u8g2_font_helvB08_tr);
-        break;
     case FontSecondary:
-        u8g2_SetFont(&canvas->fb, u8g2_font_haxrcorp4089_tr);
-        break;
     case FontKeyboard:
-        u8g2_SetFont(&canvas->fb, u8g2_font_profont11_mr);
-        break;
     case FontBigNumbers:
-        u8g2_SetFont(&canvas->fb, u8g2_font_profont22_tn);
-        break;
     case FontBatteryPercent:
-        u8g2_SetFont(&canvas->fb, u8g2_font_5x7_tr); //u8g2_font_micro_tr);
+        u8g2_SetFont(&canvas->fb, momentum_font_cn);
         break;
     default:
         furi_crash();

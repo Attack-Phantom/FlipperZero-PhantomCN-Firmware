@@ -205,6 +205,8 @@ class Main(App):
                         continue
                     elif not self._iconIsSupported(filename):
                         continue
+                    if icon_name == "A_Levelup_128x64" and frame_count > 0:
+                        continue
                     self.logger.debug(f"Processing animation frame {filename}")
                     temp_width, temp_height, data = self._icon2header(fullfilename)
                     if width is None:

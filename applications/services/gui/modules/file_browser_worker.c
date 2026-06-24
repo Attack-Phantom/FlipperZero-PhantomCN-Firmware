@@ -35,6 +35,10 @@ typedef enum {
 ARRAY_DEF(_IdxLastArray, int32_t) //-V658 // Unused, kept for compatibility
 ARRAY_DEF(ExtFilterArray, FuriString*, FURI_STRING_OPLIST) //-V658
 
+static bool browser_worker_stop_requested(void) {
+    return furi_thread_flags_get() & WorkerEvtStop;
+}
+
 struct BrowserWorker {
     FuriThread* thread;
 
@@ -194,6 +198,10 @@ static bool browser_folder_init(
     if(storage_dir_open(directory, furi_string_get_cstr(path))) {
         state = true;
         while(1) {
+            if(browser_worker_stop_requested()) {
+                state = false;
+                break;
+            }
             if(!storage_dir_read(directory, &file_info, name_temp, FILE_NAME_LEN_MAX)) {
                 break;
             }
@@ -252,6 +260,9 @@ static bool browser_folder_load_chunked(
 
         items_cnt = 0;
         while(items_cnt < offset) {
+            if(browser_worker_stop_requested()) {
+                break;
+            }
             if(!storage_dir_read(directory, &file_info, name_temp, FILE_NAME_LEN_MAX)) {
                 break;
             }
@@ -267,6 +278,9 @@ static bool browser_folder_load_chunked(
         if(items_cnt != offset) {
             break;
         }
+        if(browser_worker_stop_requested()) {
+            break;
+        }
 
         if(browser->list_load_cb) {
             browser->list_load_cb(browser->cb_ctx, offset);
@@ -274,6 +288,9 @@ static bool browser_folder_load_chunked(
 
         items_cnt = 0;
         while(items_cnt < count) {
+            if(browser_worker_stop_requested()) {
+                break;
+            }
             if(!storage_dir_read(directory, &file_info, name_temp, FILE_NAME_LEN_MAX)) {
                 break;
             }
@@ -324,11 +341,17 @@ static bool browser_folder_load_full(BrowserWorker* browser, FuriString* path) {
         if(!storage_dir_open(directory, furi_string_get_cstr(path))) {
             break;
         }
+        if(browser_worker_stop_requested()) {
+            break;
+        }
         if(browser->list_load_cb) {
             browser->list_load_cb(browser->cb_ctx, 0);
         }
         while(storage_dir_read(directory, &file_info, name_temp, FILE_NAME_LEN_MAX) &&
               storage_file_get_error(directory) == FSE_OK) {
+            if(browser_worker_stop_requested()) {
+                break;
+            }
             furi_string_set(name_str, name_temp);
             if(browser_filter_by_name(browser, name_str, file_info_is_dir(&file_info))) {
                 furi_string_printf(name_str, "%s/%s", furi_string_get_cstr(path), name_temp);
@@ -373,6 +396,10 @@ static int32_t browser_worker(void* context) {
         uint32_t flags =
             furi_thread_flags_wait(WORKER_FLAGS_ALL, FuriFlagWaitAny, FuriWaitForever);
         furi_check((flags & FuriFlagError) == 0);
+
+        if(flags & WorkerEvtStop) {
+            break;
+        }
 
         if(flags & WorkerEvtConfigChange) {
             if(browser->keep_selection && furi_string_start_with(path, browser->path_next)) {
@@ -480,10 +507,6 @@ static int32_t browser_worker(void* context) {
             } else {
                 browser_folder_load_full(browser, path);
             }
-        }
-
-        if(flags & WorkerEvtStop) {
-            break;
         }
     }
 

@@ -3,7 +3,7 @@ Version: 1
 
 Name: BadApple
 Min butthurt: 0
-Max butthurt: 18
+Max butthurt: 255
 Min level: 1
 Max level: 30
-Weight: 8
+Weight: 255

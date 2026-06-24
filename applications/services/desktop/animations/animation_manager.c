@@ -4,9 +4,7 @@
 #include <furi_hal.h>
 #include <dolphin/dolphin.h>
 #include <dolphin/helpers/dolphin_state.h>
-#include <power/power_service/power.h>
 #include <storage/storage.h>
-#include <assets_icons.h>
 
 #include "views/bubble_animation_view.h"
 #include "views/one_shot_animation_view.h"
@@ -17,15 +15,7 @@
 
 #define TAG "AnimationManager"
 
-#define HARDCODED_ANIMATION_NAME   "L1_AnimationError_128x64"
-#define NO_SD_ANIMATION_NAME       "L1_NoSd_128x49"
-#define BAD_BATTERY_ANIMATION_NAME "L1_BadBattery_128x47"
-
-#define NO_DB_ANIMATION_NAME    "L0_NoDb_128x51"
-#define BAD_SD_ANIMATION_NAME   "L0_SdBad_128x51"
-#define SD_OK_ANIMATION_NAME    "L0_SdOk_128x51"
-#define URL_ANIMATION_NAME      "L0_Url_128x51"
-#define NEW_MAIL_ANIMATION_NAME "L0_NewMail_128x51"
+#define HARDCODED_ANIMATION_NAME "BadApple"
 
 typedef enum {
     AnimationManagerStateIdle,
@@ -69,8 +59,6 @@ static bool animation_manager_check_blocking(AnimationManager* animation_manager
 static bool animation_manager_is_valid_idle_animation(
     const StorageAnimationManifestInfo* info,
     const DolphinStats* stats);
-static void animation_manager_switch_to_one_shot_view(AnimationManager* animation_manager);
-static void animation_manager_switch_to_animation_view(AnimationManager* animation_manager);
 
 void animation_manager_set_context(AnimationManager* animation_manager, void* context) {
     furi_assert(animation_manager);
@@ -184,30 +172,7 @@ void animation_manager_new_idle_process(AnimationManager* animation_manager) {
 /* reaction to animation_manager->interact_callback() */
 bool animation_manager_interact_process(AnimationManager* animation_manager) {
     furi_assert(animation_manager);
-    bool consumed = true;
-
-    if(animation_manager->levelup_pending) {
-        animation_manager->levelup_pending = false;
-        animation_manager->levelup_active = true;
-        animation_manager_switch_to_one_shot_view(animation_manager);
-        Dolphin* dolphin = furi_record_open(RECORD_DOLPHIN);
-        dolphin_upgrade_level(dolphin);
-        furi_record_close(RECORD_DOLPHIN);
-    } else if(animation_manager->levelup_active) {
-        animation_manager->levelup_active = false;
-        animation_manager_start_new_idle(animation_manager);
-        animation_manager_switch_to_animation_view(animation_manager);
-    } else if(animation_manager->state == AnimationManagerStateBlocked) {
-        bool blocked = animation_manager_check_blocking(animation_manager);
-
-        if(!blocked) {
-            animation_manager_start_new_idle(animation_manager);
-        }
-    } else {
-        consumed = false;
-    }
-
-    return consumed;
+    return false;
 }
 
 static void animation_manager_start_new_idle(AnimationManager* animation_manager) {
@@ -227,58 +192,8 @@ static void animation_manager_start_new_idle(AnimationManager* animation_manager
 static bool animation_manager_check_blocking(AnimationManager* animation_manager) {
     furi_assert(animation_manager);
 
-    StorageAnimation* blocking_animation = NULL;
-    Storage* storage = furi_record_open(RECORD_STORAGE);
-    FS_Error sd_status = storage_sd_status(storage);
-
-    if(sd_status == FSE_INTERNAL) {
-        if(!animation_manager->blocking_shown_sd_bad) {
-            blocking_animation = animation_storage_find_animation(BAD_SD_ANIMATION_NAME);
-            furi_assert(blocking_animation);
-            animation_manager->blocking_shown_sd_bad = true;
-        }
-    } else if(sd_status == FSE_NOT_READY) {
-        animation_manager->blocking_shown_sd_bad = false;
-        animation_manager->blocking_shown_sd_ok = false;
-        animation_manager->blocking_shown_no_db = false;
-    } else if(sd_status == FSE_OK) {
-        if(!animation_manager->blocking_shown_sd_ok) {
-            blocking_animation = animation_storage_find_animation(SD_OK_ANIMATION_NAME);
-            furi_assert(blocking_animation);
-            animation_manager->blocking_shown_sd_ok = true;
-        } else if(!animation_manager->blocking_shown_no_db) {
-            if(!storage_file_exists(storage, EXT_PATH("Manifest"))) {
-                blocking_animation = animation_storage_find_animation(NO_DB_ANIMATION_NAME);
-                furi_assert(blocking_animation);
-                animation_manager->blocking_shown_no_db = true;
-                animation_manager->blocking_shown_url = true;
-            }
-        } else if(animation_manager->blocking_shown_url) {
-            blocking_animation = animation_storage_find_animation(URL_ANIMATION_NAME);
-            furi_assert(blocking_animation);
-            animation_manager->blocking_shown_url = false;
-        }
-    }
-
-    Dolphin* dolphin = furi_record_open(RECORD_DOLPHIN);
-    DolphinStats stats = dolphin_stats(dolphin);
-    furi_record_close(RECORD_DOLPHIN);
-    if(!blocking_animation && stats.level_up_is_pending) {
-        blocking_animation = animation_storage_find_animation(NEW_MAIL_ANIMATION_NAME);
-        furi_check(blocking_animation);
-        animation_manager->levelup_pending = true;
-    }
-
-    if(blocking_animation) {
-        furi_timer_stop(animation_manager->idle_animation_timer);
-        animation_manager_replace_current_animation(animation_manager, blocking_animation);
-        /* no timer starting because this is blocking animation */
-        animation_manager->state = AnimationManagerStateBlocked;
-    }
-
-    furi_record_close(RECORD_STORAGE);
-
-    return !!blocking_animation;
+    UNUSED(animation_manager);
+    return false;
 }
 
 static void animation_manager_replace_current_animation(
@@ -363,20 +278,6 @@ static bool animation_manager_is_valid_idle_animation(
 
     bool result = true;
 
-    if(!strcmp(info->name, BAD_BATTERY_ANIMATION_NAME)) {
-        Power* power = furi_record_open(RECORD_POWER);
-        bool battery_is_well = power_is_battery_healthy(power);
-        furi_record_close(RECORD_POWER);
-
-        result = !battery_is_well;
-    }
-    if(!strcmp(info->name, NO_SD_ANIMATION_NAME)) {
-        Storage* storage = furi_record_open(RECORD_STORAGE);
-        FS_Error sd_status = storage_sd_status(storage);
-        furi_record_close(RECORD_STORAGE);
-
-        result = (sd_status == FSE_NOT_READY);
-    }
     if(!momentum_settings.unlock_anims) {
         if((stats->butthurt < info->min_butthurt) || (stats->butthurt > info->max_butthurt)) {
             result = false;
@@ -414,7 +315,7 @@ static StorageAnimation*
             animation_storage_get_meta(storage_animation);
         bool valid = animation_manager_is_valid_idle_animation(manifest_info, &stats);
 
-        if(strcmp(manifest_info->name, HARDCODED_ANIMATION_NAME) == 0) {
+        if(strcmp(manifest_info->name, "L1_AnimationError_128x64") == 0) {
             // Dont pick error anim randomly
             valid = false;
         }
@@ -604,42 +505,4 @@ void animation_manager_load_and_continue_animation(AnimationManager* animation_m
     bubble_animation_unfreeze(animation_manager->animation_view);
     furi_string_reset(animation_manager->freezed_animation_name);
     furi_assert(animation_manager->current_animation);
-}
-
-static void animation_manager_switch_to_one_shot_view(AnimationManager* animation_manager) {
-    furi_assert(animation_manager);
-    furi_assert(!animation_manager->one_shot_view);
-
-    // For some reason, removing this unused check has a change to cause NULL pointer crashes
-    // Maybe getting stats has a side effect of synchronizing some state in dolphin service?
-    // Anyway dolphin_get_level() will always return between 1 and COUNT+1 (included) so can
-    // check this boundary to also prevent compiler optimizing it out (I don't trust GCC anymore)
-    Dolphin* dolphin = furi_record_open(RECORD_DOLPHIN);
-    DolphinStats stats = dolphin_stats(dolphin);
-    furi_record_close(RECORD_DOLPHIN);
-
-    animation_manager->one_shot_view = one_shot_view_alloc();
-    one_shot_view_set_interact_callback(
-        animation_manager->one_shot_view, animation_manager_interact_callback, animation_manager);
-    View* prev_view = bubble_animation_get_view(animation_manager->animation_view);
-    View* next_view = one_shot_view_get_view(animation_manager->one_shot_view);
-    view_stack_remove_view(animation_manager->view_stack, prev_view);
-    view_stack_add_view(animation_manager->view_stack, next_view);
-    if(stats.level > 0 && stats.level <= DOLPHIN_LEVEL_COUNT + 1) {
-        one_shot_view_start_animation(animation_manager->one_shot_view, &A_Levelup_128x64);
-    } else {
-        furi_crash();
-    }
-}
-
-static void animation_manager_switch_to_animation_view(AnimationManager* animation_manager) {
-    furi_assert(animation_manager);
-    furi_assert(animation_manager->one_shot_view);
-
-    View* prev_view = one_shot_view_get_view(animation_manager->one_shot_view);
-    View* next_view = bubble_animation_get_view(animation_manager->animation_view);
-    view_stack_remove_view(animation_manager->view_stack, prev_view);
-    view_stack_add_view(animation_manager->view_stack, next_view);
-    one_shot_view_free(animation_manager->one_shot_view);
-    animation_manager->one_shot_view = NULL;
 }

@@ -213,3 +213,7 @@ void vApplicationStackOverflowHook(TaskHandle_t xTask, char* pcTaskName) {
     furi_log_puts("\r\n\r\n");
     furi_crash("StackOverflow");
 }
+
+void vApplicationMallocFailedHook(void) {
+    furi_crash("MallocFailed");
+}

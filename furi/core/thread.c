@@ -215,6 +215,7 @@ void furi_thread_scrub(void) {
 
 FuriThread* furi_thread_alloc(void) {
     FuriThread* thread = malloc(sizeof(FuriThread));
+    furi_check(thread);
 
     furi_thread_init_common(thread);
 
@@ -227,10 +228,12 @@ FuriThread* furi_thread_alloc_service(
     FuriThreadCallback callback,
     void* context) {
     FuriThread* thread = memmgr_alloc_from_pool(sizeof(FuriThread));
+    furi_check(thread);
 
     furi_thread_init_common(thread);
 
     thread->stack_buffer = memmgr_alloc_from_pool(stack_size);
+    furi_check(thread->stack_buffer);
     thread->stack_size = stack_size;
     thread->is_service = true;
 
@@ -309,6 +312,7 @@ void furi_thread_set_stack_size(FuriThread* thread, size_t stack_size) {
     }
 
     thread->stack_buffer = malloc(stack_size);
+    furi_check(thread->stack_buffer);
     thread->stack_size = stack_size;
 }
 

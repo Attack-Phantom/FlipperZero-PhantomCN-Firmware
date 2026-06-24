@@ -76,6 +76,12 @@ def _resources_dist_action(target, source, env):
         else:
             raise StopError(f"Unsupported dist entry type: {type(src)}")
 
+    asset_packs = os.path.join(env.Dir(env["RESOURCES_ROOT"]).abspath, "asset_packs")
+    if os.path.isdir(asset_packs):
+        for pack in os.listdir(asset_packs):
+            if pack != "PhantomCN":
+                shutil.rmtree(os.path.join(asset_packs, pack), ignore_errors=True)
+
 
 def generate(env, **kw):
     env.SetDefault(

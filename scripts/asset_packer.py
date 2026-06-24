@@ -136,6 +136,8 @@ def pack(
             continue
         if not source.is_dir() or source.name.startswith("."):
             continue
+        if source.name != "PhantomCN":
+            continue
 
         logger(f"Pack: custom user pack '{source.name}'")
         packed = output / source.name
