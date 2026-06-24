@@ -823,7 +823,7 @@ bleScanCtx *ble_init(){
 
     
     // bleCtx->view_list[subMenuViewSetup] = view_alloc();
-    bleCtx->view_list[subMenuViewScan] = widget_alloc();
+    bleCtx->view_list[subMenuViewScan] = view_alloc();
     bleCtx->view_list[subMenuViewWeapon] = view_alloc();
     uapp->text_box = text_box_alloc();
     bleCtx->view_list[subMenuViewConsole] = uapp->text_box;
@@ -842,7 +842,7 @@ bleScanCtx *ble_init(){
     uapp->text_box_store = furi_string_alloc();
     furi_string_reserve(uapp->text_box_store, UART_TERMINAL_TEXT_BOX_STORE_SIZE); 
 
-    View *scan_view = widget_get_view(bleCtx->view_list[subMenuViewScan]);
+    View *scan_view = (View*)bleCtx->view_list[subMenuViewScan];
 
     view_dispatcher_add_view(
         bleCtx->view_dispatcher,
@@ -956,7 +956,7 @@ void ble_free(bleScanCtx *bleCtx){
     }
 
     widget_free(bleCtx->view_list[subMenuViewAbout]);
-    // widget_free(bleCtx->view_list[subMenuViewScan]);
+    view_free(bleCtx->view_list[subMenuViewScan]);
     
     submenu_free(bleCtx->submenu);  
 

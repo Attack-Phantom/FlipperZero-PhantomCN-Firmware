@@ -3,7 +3,7 @@ App(
   name="[BLE] BLE Killer",
   apptype=FlipperAppType.EXTERNAL,
   entry_point="main_entry",
-  stack_size=1 * 2048,
+  stack_size=4 * 1024,
   requires=[
       "gui",
   ],
